@@ -15,7 +15,7 @@ public:
 	void Dis_Mesh();
 	void Gen_kvec();
 	void Dis_kvec();
-	void Mat_ludc();
+	void Sol_ludc();
 	void Dis_MtLU();
 	void Gen_forf();
 	void Gen_gvec();
@@ -220,6 +220,35 @@ void FEM1DDD::Mat_ludc() {
 //			std::cout<<"U initialised"<<i<<j<<std::endl;
 		}
 	}
+	
+	std::vector<double> y();
+	y[0]=f_vector[0];
+		
+	//forward 
+	for (int j = 0; j <= numofele; j=j+1)	
+	{
+		t=0;
+		for (int num = 0; num < j; num=num+1)
+		{
+			t = t + ( L[num][j] * y[num] );
+			cout << "cal for t" << "\t" << num << endl;
+		}
+		y[j]= (1/l_vector[j][j])*(f_vector[j]-t);
+	}
+		
+		
+	//backward
+	for (int j = numofele; j >= 0; j=j-1)
+	{
+		t=0;
+		for (int num = j; num <= numofele; num=num+1)
+		{
+			t = t + ( U[j][num+1] * d_vector[num+1] );
+			cout << "cal for t" << "\t" << num << endl;
+		}			
+		d_vector[j]=(1/u_vector[j][j]) * (y[j]-t) ;	
+	}
+
 	return;
 }
 
@@ -334,38 +363,5 @@ void FEM1DDD::Sol_GaSi() {
 		if (std::sqrt(diff)<conv_criteria) conv_check = 1;
 
 	}
-	
-	void FEM1DDD::back_LU()	{
-
-		std::vector<double> y();
-		y[0]=f_vector[0];
-		
-		//forward 
-			for (int j = 0; j <= numofele; j=j+1)	
-			{
-			t=0;
-				for (int num = 0; num < j; num=num+1)
-				{
-					t = t + ( L[num][j] * y[num] );
-					cout << "cal for t" << "\t" << num << endl;
-				}
-				y[j]= (1/l_vector[j][j])*(f_vector[j]-t);
-			}
-		
-		
-		//backward
-			for (int j = numofele; j >= 0; j=j-1)
-			{
-			t=0;
-				for (int num = j; num <= numofele; num=num+1)
-				{
-					t = t + ( U[j][num+1] * d_vector[num+1] );
-					cout << "cal for t" << "\t" << num << endl;
-				}			
-				d_vector[j]=(1/u_vector[j][j]) * (y[j]-t) ;	
-			}
-
-
-
 	return;
 }
