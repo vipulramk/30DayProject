@@ -20,6 +20,8 @@ public:
 	void Gen_forf();
 	void Gen_gvec();
 	void Sol_GaSi();
+	void Sol_Guel();
+	void Dis_dvec();
 
 	// Member Objects:
 	double obj_start, obj_end, lenofele;
@@ -126,7 +128,6 @@ void FEM1DDD::Gen_kvec() {
 					break;
 					case 1:
 					for (k = -1; (2+4*(k)) < i+j; k++) {
-
 					}
 					k_vector[i][j] = -4*elasticity/(3*h[k]);
 //					k_vector[i][j] = -4/(3*h[k+1]);
@@ -172,7 +173,7 @@ void FEM1DDD::Dis_kvec() {
 	return;
 }
 
-void FEM1DDD::Mat_ludc() {
+void FEM1DDD::Sol_ludc() {
 
   	l_vector.resize(klen);
 	for (int i = 0; i < klen; ++i){
@@ -221,34 +222,59 @@ void FEM1DDD::Mat_ludc() {
 		}
 	}
 	
-	std::vector<double> y();
-	y[0]=f_vector[0];
+	std::vector<double> y;
+
+	std::cout << std::setprecision(4) << std::fixed;
+	for (int i = 0; i<klen; i++) {
+
+		double temp = f_vector[i] + g_vector[i];
+		for (int j = 0; j<i; j++) {
+
+			temp = temp - (l_vector[i][j]*y[j]);
+		}
+		y.push_back(temp/l_vector[i][i]);
+	}
+
+	d_vector.resize(y.size());
+
+	for (int i = klen-1; i >= 0; i--) {
+		double temp = y[i];
+		for (int j = i; j<klen; j++) {
+			temp = temp - (u_vector[i][j]*d_vector[j]);
+		}
+		d_vector[i] = temp;
+	}
+
+	std::cout << "LU Decompositon Crouts Method -------------------------------------" << std::endl;
+
+
+/*	y.push_back(f_vector[0]);
 		
 	//forward 
 	for (int j = 0; j <= numofele; j=j+1)	
 	{
-		t=0;
+		int t=0;
 		for (int num = 0; num < j; num=num+1)
 		{
-			t = t + ( L[num][j] * y[num] );
-			cout << "cal for t" << "\t" << num << endl;
+			t = t + ( l_vector[num][j] * y[num] );
+			std::cout << "cal for t" << "\t" << num << std::endl;
 		}
-		y[j]= (1/l_vector[j][j])*(f_vector[j]-t);
+		y.push_back((1/l_vector[j][j])*(f_vector[j]-t));
 	}
 		
 		
 	//backward
 	for (int j = numofele; j >= 0; j=j-1)
 	{
-		t=0;
+		int t=0;
 		for (int num = j; num <= numofele; num=num+1)
 		{
-			t = t + ( U[j][num+1] * d_vector[num+1] );
-			cout << "cal for t" << "\t" << num << endl;
+			t = t + ( u_vector[j][num+1] * d_vector[num+1] );
+			std::cout << "cal for t" << "\t" << num << std::endl;
 		}			
 		d_vector[j]=(1/u_vector[j][j]) * (y[j]-t) ;	
 	}
-
+*/
 	return;
 }
 
@@ -292,12 +318,25 @@ void FEM1DDD::Gen_forf() {
 
 	std::cout << "The force matrix is as follows: " << std::endl;
 
-	for (int i=0; i<numofele-1; i++) {
-		f_vector.push_back(forfun*(h[i]+h[i+1])/2);
+	if (basisorder==1) {
+		for (int i=0; i<numofele-1; i++) {
+			f_vector.push_back(forfun*(h[i]+h[i+1])/2);
+		}
+	
+		for (int i=0; i<numofele-1; i++) {
+			std::cout << f_vector[i] << std::endl;;
+		}
 	}
 
-	for (int i=0; i<numofele-1; i++) {
-		std::cout << f_vector[i] << std::endl;;
+	if (basisorder==2) {
+		for (int i=0; i<2*numofele-1; i++) {
+			if(fmod(i,2)==0) f_vector.push_back(forfun*4*h[i/2]/3);
+			else if(fmod(i,2)==1) f_vector.push_back(forfun*(h[(i-1)/2]+h[(i+1)/2])/3);
+		}
+	
+		for (int i=0; i<2*numofele-1; i++) {
+			std::cout << f_vector[i] << std::endl;;
+		}
 	}
 
 	std::cout << std::endl;
@@ -306,19 +345,37 @@ void FEM1DDD::Gen_forf() {
 
 void FEM1DDD::Gen_gvec() {
 
-	g_vector.resize(numofele-1);
-	g_vector[0] = bc1;
-	g_vector[numofele-2] = bc2*elasticity/h[numofele-1];
-	std::cout << "The G vector is: " << std::endl;
-	for (int i=0; i<numofele-1; i++) {
-		std::cout << g_vector[i] << std::endl;
+	if (basisorder==1) {
+		g_vector.resize(numofele-1);
+		g_vector[0] = bc1;
+		g_vector[g_vector.size()-1] = bc2*elasticity/h[numofele-1];
+		std::cout << "The G vector is: " << std::endl;
+		for (int i=0; i<numofele-1; i++) {
+			std::cout << g_vector[i] << std::endl;
+		}
+		std::cout << std::endl;
 	}
+
+	if (basisorder==2) {
+		g_vector.resize(2*numofele-1);
+		g_vector[0] = 4*bc1*elasticity/(3*h[0]);
+		g_vector[1] = -1*bc1*elasticity/(6*h[0]);
+		g_vector[g_vector.size()-2] = -1*bc2*elasticity/(6*h[numofele-1]);
+		g_vector[g_vector.size()-1] = 4*bc2*elasticity/(3*h[numofele-1]);
+		std::cout << "The G vector is: " << std::endl;
+		for (int i=0; i<2*numofele-1; i++) {
+			std::cout << g_vector[i] << std::endl;
+		}
+		std::cout << std::endl;
+	}
+
+
 	return;
 }
 
 void FEM1DDD::Sol_GaSi() {
 
-	int dlen = numofele-1;
+	int dlen = klen;
 	for (int i=0; i<dlen; i++) {
 		d_vector.push_back(0);
 	}
@@ -344,7 +401,7 @@ void FEM1DDD::Sol_GaSi() {
 
 		std::cout << "Iteration: " << i << "\t";
 
-		std::cout << std::setprecision(6) << std::fixed;
+		std::cout << std::setprecision(4) << std::fixed;
 
 		for (int j=0; j<dlen; j++) {
 			std::cout << d_vector[j] << "\t";
@@ -363,5 +420,78 @@ void FEM1DDD::Sol_GaSi() {
 		if (std::sqrt(diff)<conv_criteria) conv_check = 1;
 
 	}
+	std::cout << "Guass Seidel Method -------------------------------------" << std::endl;
+	return;
+}
+
+void FEM1DDD::Sol_Guel() {
+
+	std::vector<double> B;
+
+	for (int i = 0; i<klen; i++) {
+		B.push_back(f_vector[i] + g_vector[i]);
+	}
+
+	for (int i = 0; i<klen; i++) {
+
+		double temp = k_vector[i][i];
+		for (int j = i; j<kwid; j++) {
+			k_vector[i][j] = k_vector[i][j]/temp;
+		}
+
+		B[i] = B[i]/temp;
+
+		for (int j = i+1; j<klen; j++) {
+
+			double pivot = k_vector[j][i];
+			for (int k = i; k<kwid; k++) {
+				k_vector[j][k] = k_vector[j][k] - pivot*k_vector[i][k];
+			}
+			B[j] = B[j] - pivot*B[i];
+		}
+	}
+
+/*	for (int i = 0; i<klen; i++) {
+
+		for (int j = 0; j<kwid; j++) {
+			std::cout << k_vector[i][j] << "\t";
+		}
+		std::cout << std::endl;
+	}
+*/
+
+	d_vector.resize(klen);
+	for (int i = klen-1; i >= 0; i--) {
+		double temp = B[i];
+		for (int j = i; j<klen; j++) {
+			temp = temp - (k_vector[i][j]*d_vector[j]);
+		}
+		d_vector[i] = temp;
+	}
+	std::cout << "Guass Elimination Method -------------------------------------" << std::endl;
+return;
+}
+
+void FEM1DDD::Dis_dvec() {
+
+	int dlen = d_vector.size();
+
+	std::cout << std::setprecision(4) << std::fixed;
+	std::cout << "The field on nodes is as follows: " << std::endl;
+
+	for (int j=0; j<dlen; j++) {
+		std::cout << d_vector[j] << "\t";
+	}
+
+	std::cout << std::endl;
+
+	std::cout << "The actual solution is as follows: " << std::endl;
+	double x = h[0];
+	for (int j=0; j<dlen; j++) {
+		std::cout << (-forfun*x*x/2 + 6e9*x)/elasticity << "\t";
+		x = x+h[j+1];
+	}
+	std::cout << std::endl;
+
 	return;
 }
